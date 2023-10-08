@@ -90,6 +90,8 @@ int main()
         .inventorySize = 1,
         .inventory[0] = manapotion};
 
+    struct Character empty;
+
     printf("Commencing tests....\n");
 
     printf("Asserting isValidName...\n");
@@ -134,6 +136,12 @@ int main()
     int wfd_character2 = open("characters2.dat", O_WRONLY | O_CREAT | O_TRUNC, 0666);
     assert(saveCharacters(character_array2, 3, wfd_character2) == 1);
     close(wfd_character2);
+
+    printf("Saving characters 3...\n");
+    struct Character character_array3[3] = {empty, michael};
+    int wfd_character3 = open("characters3.dat", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    assert(saveCharacters(character_array3, 1, wfd_character2) == 1);
+    close(wfd_character3);
 
     printf("Reading characters...\n");
     int rfd_character = open("characters.dat", O_RDONLY);

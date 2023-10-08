@@ -64,8 +64,6 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* numEls, int fd) {
     return 1;
   }
 
-  
-  
   //uint64_t* headerBuf = (uint64_t*)malloc(sizeof(uint64_t));
   uint64_t headerBuf;
   
@@ -98,6 +96,13 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* numEls, int fd) {
       //DO you only need to free pointers? what about numElValue and structBuffer?
       return 1;
       //FLESH OUT
+    }
+
+    if(!isValidItemDetails(&structBuffer)){
+      printf("Invalid ItemDetails found in file");
+      free(numEls);
+      free(structArrayBuffer);
+      return 1;
     }
 
     structArrayBuffer[i] = structBuffer;
@@ -184,7 +189,6 @@ int isValidItemDetails(const struct ItemDetails *id) {
   
   return 1; 
 
-  
 }
 
 int isValidCharacter(const struct Character * c) {
@@ -211,7 +215,6 @@ int isValidCharacter(const struct Character * c) {
   for (long unsigned int i = 0; i < c->inventorySize; i++){
     itemsCarried = itemsCarried + c->inventory[i].quantity;
   }
-  printf("%li\n", itemsCarried);
   if(itemsCarried > MAX_ITEMS){
     printf("Character has too many items\n");
     return 0;
@@ -268,6 +271,8 @@ int loadCharacters(struct Character** ptr, size_t* numEls, int fd) {
   printf("%ld", headerBuf);
   fflush(stdout);
 
+  
+
   *numEls = headerBuf;
 
   //size_t numElValue = (size_t) atoi(headerBuf);
@@ -287,6 +292,13 @@ int loadCharacters(struct Character** ptr, size_t* numEls, int fd) {
       //DO you only need to free pointers? what about numElValue and structBuffer?
       return 1;
       //FLESH OUT
+    }
+
+    if(!isValidCharacter(&structBuffer)){
+      printf("Invalid Character found in file");
+      free(numEls);
+      free(structArrayBuffer);
+      return 1;
     }
 
     structArrayBuffer[i] = structBuffer;
