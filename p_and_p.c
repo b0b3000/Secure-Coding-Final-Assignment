@@ -20,15 +20,21 @@ int saveItemDetails(const struct ItemDetails* arr, size_t numEls, int fd) {
     return 1;
   }
 
+  
+
   //Header
   uint64_t numItems = numEls;
   if(write(fd, &numItems, sizeof(uint64_t)) <= 0){
     printf("ERROR writing header");
-
+    return 1;
   }
 
   //Block
   for (size_t index = 0; index < numEls; index++){
+    if (!isValidItemDetails(&arr[index])){
+      printf("INVALID ITEM DETAILS\n\n");
+      return 1;
+    }
     if(write(fd, &arr[index], sizeof(struct ItemDetails)) <=0){
       printf("ERROR writing body");
     }
@@ -225,11 +231,16 @@ int saveCharacters(struct Character *arr, size_t numEls, int fd) {
   uint64_t numItems = numEls;
   if(write(fd, &numItems, sizeof(uint64_t)) <= 0){
     printf("ERROR writing header");
+    return 1;
 
   }
 
   //Block
   for (size_t index = 0; index < numEls; index++){
+    if (!isValidCharacter(&arr[index])){
+      printf("INVALID CHARACTER\n\n");
+      return 1;
+    }
     if(write(fd, &arr[index], sizeof(struct Character)) <=0){
       printf("ERROR writing body");
     }
