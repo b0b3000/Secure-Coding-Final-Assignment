@@ -262,9 +262,17 @@ int main()
 
     printf("Testing secureload...\n");
 
-    char *path = "/home/pitchpoladmin/items.dat";
+    printf("TEST 1\n");
+    fflush(stdout);
+    char *path = "//home/bob/Desktop/CITS3007/ProjectV2/items.dat";
+    printf("TEST 1\n");
+    fflush(stdout);
     int ret = secureLoad(path);
+    printf("TEST 1\n");
+    fflush(stdout);
     assert(ret==0);
+    printf("TEST 1\n");
+    fflush(stdout);
     printf("Tests Passed...\n");
 
     return 0;

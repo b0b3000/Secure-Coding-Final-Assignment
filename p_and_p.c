@@ -7,6 +7,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
+#include <pwd.h>
+#include <sys/stat.h>
 
 #define MAXINTDIGITS 21
 
@@ -23,6 +25,12 @@ int saveItemDetails(const struct ItemDetails* arr, size_t nmemb, int fd) {
 
   //This might not be necessary
   int fdDup = dup(fd);
+
+  if(fdDup<=2){
+    printf("File fdDup error\n");
+    return 1;
+  }
+
   //check dup success
 
   FILE* fp = fdopen(fdDup, "w");
@@ -69,6 +77,10 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
 
   int fdDup = dup(fd);
   //check dup success
+  if(fdDup<=2){
+    printf("File fdDup error\n");
+    return 1;
+  }
 
   FILE* fp = fdopen(fdDup, "r");
   fflush(fp);
@@ -258,6 +270,10 @@ int saveCharacters(struct Character *arr, size_t nmemb, int fd) {
   //This might not be necessary
   int fdDup = dup(fd);
   //check dup success
+  if(fdDup<=2){
+    printf("File fdDup error\n");
+    return 1;
+  }
 
   printf("TEST 1\n");
     fflush(stdout);
@@ -318,6 +334,10 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
   //This might not be necessary
   int fdDup = dup(fd);
   //check dup success
+  if(fdDup<=2){
+    printf("File fdDup error\n");
+    return 1;
+  }
 
   FILE* fp = fdopen(fdDup, "r");
   fflush(fp);
@@ -377,13 +397,78 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
   return 0;
 }
 
+void playGame(struct ItemDetails* ptr, size_t nmemb){
+  return;
+}
 
 int secureLoad(const char *filepath) {
+  // Check guid as pitchpoladmin
+  
+  struct passwd *ppAdmin;
+  ppAdmin = getpwnam("pitchpoladmin");
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  uid_t callerUid = getuid();
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  if (callerUid != ppAdmin->pw_uid){
+    printf("Not the admin. Error");
+    return 2;
+  }
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  if(seteuid(ppAdmin->pw_uid) == -1){
+    printf("Error with seteuid\n");
+    return 2;
+  }
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  // check filetype, and ensure it is not malicious.  
+  int fd = open(filepath, O_RDONLY);
+
+  if (fd <= 2){
+    printf("BAD FD");
+    return 1;
+  }
+  struct stat fileStats;
+  if(fstat(fd, &fileStats) == -1){
+    printf("Error obtaining file stats\n");
+    return 1;
+  }
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  if(!((fileStats.st_uid == ppAdmin->pw_uid) & (fileStats.st_gid == ppAdmin->pw_gid))){
+    printf("Invalid file perms");
+    return 1;
+  }
+
+  // file is correct, and hasn't been swapped underneath us.
+  struct ItemDetails *ptr;
+  size_t nmemb;
+  if(loadItemDetails(&ptr, &nmemb, fd) == 1){
+    printf("Error with load item");
+    return 1;
+  }
+
+  close(fd);
+
+  // drop privileges
+  if(seteuid(callerUid) == -1){
+    printf("error dropping");
+    return 2;
+  }
+
+  playGame(ptr, nmemb);
+  free(ptr);
   return 0;
 }
 
 
-void playGame(struct ItemDetails* ptr, size_t nmemb);
 
 
 /*
