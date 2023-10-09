@@ -127,9 +127,17 @@ int main()
     // Checking character reading and writing
     printf("Saving characters...\n");
     struct Character character_array[2] = {martin, michael};
+    printf("TEST 1\n");
+    fflush(stdout);
     int wfd_character = open("characters.dat", O_WRONLY | O_CREAT | O_TRUNC, 0666);
+    printf("TEST 1\n");
+    fflush(stdout);
     assert(saveCharacters(character_array, 2, wfd_character) == 0);
+    printf("TEST 1\n");
+    fflush(stdout);
     close(wfd_character);
+    printf("TEST 1\n");
+    fflush(stdout);
 
     printf("Saving characters 2...\n");
     struct Character character_array2[3] = {martin, michael, nic};
@@ -145,17 +153,33 @@ int main()
 
     printf("Reading characters...\n");
     int rfd_character = open("characters.dat", O_RDONLY);
+    printf("TEST b\n");
+    fflush(stdout);
     struct Character *character_buffer;
+    printf("TEST c\n");
+    fflush(stdout);
     size_t num_characters;
+    printf("TEST d\n");
+    fflush(stdout);
+    printf("charcter_buffer: %ln", &num_characters);
     loadCharacters(&character_buffer, &num_characters, rfd_character);
+    
+    printf("TEST e\n");
+    fflush(stdout);
     close(rfd_character);
     // assert character values
     assert(num_characters == 2);
 
     printf("Checking character: Martin...\n");
     assert(character_buffer[0].characterID == 20);
+    printf("TEST e\n");
+    fflush(stdout);
     assert(strcmp(character_buffer[0].name, "Martin") == 0);
+    printf("TEST e\n");
+    fflush(stdout);
     assert(strcmp(character_buffer[0].profession, "Wizard") == 0);
+    printf("TEST e\n");
+    fflush(stdout);
     assert(character_buffer[0].socialClass == 1);
     assert(character_buffer[0].inventorySize == 1);
     assert(character_buffer[0].inventory[0].itemID == 11);
@@ -168,6 +192,7 @@ int main()
     assert(character_buffer[1].inventorySize == 2);
     assert(character_buffer[1].inventory[0].itemID == 10);
     assert(character_buffer[1].inventory[1].itemID == 2);
+    free(character_buffer);
 
     printf("Checking Item Reading and writing...\n");
     // Checking item reading and writing
@@ -183,11 +208,16 @@ int main()
     struct ItemDetails *items_buffer;
     size_t num_Items;
     loadItemDetails(&items_buffer, &num_Items, rfd_items);
+    
     // asserting item values
     close(rfd_items);
     assert(num_Items == 3);
 
+    printf("TEST 1\n");
+    fflush(stdout);
     assert(items_buffer[0].itemID == 12);
+    printf("TEST 2\n");
+    fflush(stdout);
     assert(strcmp(items_buffer[0].desc, "Sturdy safeguard against the evils.") == 0);
     assert(strcmp(items_buffer[0].name, "sturdy_shield") == 0);
 
@@ -198,7 +228,7 @@ int main()
     assert(items_buffer[2].itemID == 10);
     assert(strcmp(items_buffer[2].desc, "Heals for 10hp.") == 0);
     assert(strcmp(items_buffer[2].name, "health_potion") == 0);
-
+    free(items_buffer);
     printf("moodle check...\n");
     struct ItemDetails itemArr[] = {
         {.itemID = 16602759796824695000UL, .name = "telescope", .desc = "brass with wooden tripod, 25x30x60 in."}};
@@ -238,4 +268,6 @@ int main()
     printf("Tests Passed...\n");
 
     return 0;
+
+
 }

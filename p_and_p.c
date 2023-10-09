@@ -1,5 +1,6 @@
-#include "p_and_p.h"
+#define _XOPEN_SOURCE 600
 
+#include "p_and_p.h"
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -13,103 +14,126 @@
 //make p_and_p
 // ./p_and_p
 
-int saveItemDetails(const struct ItemDetails* arr, size_t numEls, int fd) {
+int saveItemDetails(const struct ItemDetails* arr, size_t nmemb, int fd) {
 
   if(fd<=2){
     printf("File fd error\n");
     return 1;
   }
 
-  
+  //This might not be necessary
+  int fdDup = dup(fd);
+  //check dup success
+
+  FILE* fp = fdopen(fdDup, "w");
+  fflush(fp);
+  //check success of fdopen
+
+
 
   //Header
-  uint64_t numItems = numEls;
-  if(write(fd, &numItems, sizeof(uint64_t)) <= 0){
+  uint64_t numItems = nmemb;
+  if(fwrite(&numItems, sizeof(uint64_t), 1, fp) != 1){
     printf("ERROR writing header");
+    fflush(fp);
+    fclose(fp);
     return 1;
   }
 
   //Block
-  for (size_t index = 0; index < numEls; index++){
+  for (size_t index = 0; index < nmemb; index++){
     if (!isValidItemDetails(&arr[index])){
       printf("INVALID ITEM DETAILS\n\n");
+      fflush(fp);
+      fclose(fp);
       return 1;
     }
-    if(write(fd, &arr[index], sizeof(struct ItemDetails)) <=0){
+    if(fwrite(&arr[index], sizeof(struct ItemDetails), 1, fp) != 1){
       printf("ERROR writing body");
+      fflush(fp);
+      fclose(fp);
+      return 1;
     }
   }
 
+  fflush(fp);
+  fclose(fp);
   return 0;
 }
 
-int saveItemDetailsToPath(const struct ItemDetails* arr, size_t numEls, const char* filename) {
-  int fd = open(filename,O_WRONLY);
 
-  if(fd<=2){
-        printf("File fd error %i\n", fd);
-        return 1;
-    }
 
-  saveItemDetails(arr, numEls, fd);
 
-  close(fd);
-  return 0;
-}
 
-int loadItemDetails(struct ItemDetails** ptr, size_t* numEls, int fd) {
+int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
+
+  int fdDup = dup(fd);
+  //check dup success
+
+  FILE* fp = fdopen(fdDup, "r");
+  fflush(fp);
 
   if(fd<=2){
     printf("File fd error%i\n", fd);
+    fflush(fp);
+    fclose(fp);
     return 1;
   }
 
   //uint64_t* headerBuf = (uint64_t*)malloc(sizeof(uint64_t));
   uint64_t headerBuf;
   
-  printf("FD %i\n", fd);
-  if(read(fd, &headerBuf, sizeof(uint64_t)) <= 0){
+  if(fread(&headerBuf, sizeof(uint64_t), 1, fp) <= 0){
     printf("ERROR reading header");
+    fflush(fp);
     //free(headerBuf);
+    fclose(fp);
     return 1;
     //FLESH OUT
   }
+
   printf("HEADER%ld\n", headerBuf);
   fflush(stdout);
 
-  *numEls = headerBuf;
+  *nmemb = headerBuf;
 
   //size_t numElValue = (size_t) atoi(headerBuf);
   //*numEls = numElValue;
 
-  struct ItemDetails *structArrayBuffer = calloc(*numEls, sizeof(struct ItemDetails));
+  struct ItemDetails *structArrayBuffer = calloc(*nmemb, sizeof(struct ItemDetails));
   
-  for (size_t i = 0; i < *numEls; i++){
+  for (size_t i = 0; i < *nmemb; i++){
 
     struct ItemDetails structBuffer;
 
-    if(read(fd, &structBuffer, sizeof(struct ItemDetails)) <= 0){
+    if(fread(&structBuffer, sizeof(struct ItemDetails), 1, fp) <= 0){
+
       printf("ERROR reading body on iteration %li", i);
-      free(numEls);
       free(structArrayBuffer);
-      //free(headerBuf);
-      //DO you only need to free pointers? what about numElValue and structBuffer?
+      fflush(fp);
+      fclose(fp);
+
+
       return 1;
       //FLESH OUT
     }
 
     if(!isValidItemDetails(&structBuffer)){
       printf("Invalid ItemDetails found in file");
-      free(numEls);
+      free(nmemb);
       free(structArrayBuffer);
+      fflush(fp);
+      fclose(fp);
       return 1;
     }
 
     structArrayBuffer[i] = structBuffer;
- 
+
   }
 
   *ptr = structArrayBuffer;
+  fflush(fp);
+  fclose(fp);
   return 0;
 
 }
@@ -143,26 +167,29 @@ int isValidMultiword(const char *str) {
   if(str == NULL){
     return 0;
   }
+  fflush(stdout);
   //Check first letter not space
+
   if (!isgraph(str[0])){
     return 0;
   } 
+  fflush(stdout);
 
   int validMulti = 0;
-
+  fflush(stdout);
   for (int index = 1; index < DEFAULT_BUFFER_SIZE; index++){
     
     //if string over, break the loop
     if (str[index] == '\0'){
       //check last letter not blank
-      if (isblank(str[index - 1])){
+      if (isspace(str[index - 1])){
         return 0;
       } else {
         return validMulti;
       }
     }
     
-    if(isgraph(str[index]) || (isblank(str[index]))){
+    if(isgraph(str[index]) || (isspace(str[index]))){
       validMulti = 1;
     } else {
       return 0;
@@ -178,12 +205,10 @@ int isValidItemDetails(const struct ItemDetails *id) {
   }
 
   if (!isValidName(id->name)){
-    printf("ItemDetails struct has invalid name\n");
     return 0;
   } 
 
   if (!isValidMultiword(id->desc)){
-    printf("ItemDetails struct has invalid desc\n");
     return 0;
   } 
   
@@ -223,71 +248,110 @@ int isValidCharacter(const struct Character * c) {
   return 1;
 }
 
-int saveCharacters(struct Character *arr, size_t numEls, int fd) {
+int saveCharacters(struct Character *arr, size_t nmemb, int fd) {
 
   if(fd<=2){
     printf("File fd error\n");
     return 1;
   }
 
+  //This might not be necessary
+  int fdDup = dup(fd);
+  //check dup success
+
+  printf("TEST 1\n");
+    fflush(stdout);
+
+  FILE* fp = fdopen(fdDup, "w");
+  fflush(fp);
+
+  printf("TEST 1\n");
+    fflush(stdout);
+
   //Header
-  uint64_t numItems = numEls;
-  if(write(fd, &numItems, sizeof(uint64_t)) <= 0){
+  uint64_t numItems = nmemb;
+  printf("TEST a\n");
+  fflush(stdout);
+  if(fwrite(&numItems, sizeof(uint64_t), 1, fp) <= 0){
     printf("ERROR writing header");
+    fflush(stdout);
+    fflush(fp);
+    fclose(fp);
+    
     return 1;
 
   }
 
   //Block
-  for (size_t index = 0; index < numEls; index++){
+  printf("TEST 222\n");
+    fflush(stdout);
+  for (size_t index = 0; index < nmemb; index++){
+    printf("TEST 2\n");
+    fflush(stdout);
     if (!isValidCharacter(&arr[index])){
       printf("INVALID CHARACTER\n\n");
+      fflush(fp);
+      fclose(fp);
       return 1;
     }
-    if(write(fd, &arr[index], sizeof(struct Character)) <=0){
+    if(fwrite(&arr[index], sizeof(struct Character), 1, fp) <=0){
       printf("ERROR writing body");
+      fflush(fp);
+      fclose(fp);
+      return 1;
     }
   }
 
+  fflush(fp);
+  fclose(fp);
   return 0;
 }
 
-int loadCharacters(struct Character** ptr, size_t* numEls, int fd) {
+int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
+
+
   if(fd<=2){
     printf("File fd error%i\n", fd);
     return 1;
   }
 
+  //This might not be necessary
+  int fdDup = dup(fd);
+  //check dup success
+
+  FILE* fp = fdopen(fdDup, "r");
+  fflush(fp);
+
   //uint64_t* headerBuf = (uint64_t*)malloc(sizeof(uint64_t));
   uint64_t headerBuf;
   
   printf("FD %i", fd);
-  if(read(fd, &headerBuf, sizeof(uint64_t)) <= 0){
+  if(fread(&headerBuf, sizeof(uint64_t), 1, fp) <= 0){
     printf("ERROR reading header");
+    fflush(fp);
+    fclose(fp);
     //free(headerBuf);
     return 1;
     //FLESH OUT
   }
-  printf("%ld", headerBuf);
-  fflush(stdout);
-
   
 
-  *numEls = headerBuf;
+  *nmemb = headerBuf;
 
   //size_t numElValue = (size_t) atoi(headerBuf);
   //*numEls = numElValue;
 
-  struct Character *structArrayBuffer = calloc(*numEls, sizeof(struct Character));
+  struct Character *structArrayBuffer = calloc(*nmemb, sizeof(struct Character));
   
-  for (size_t i = 0; i < *numEls; i++){
+  for (size_t i = 0; i < *nmemb; i++){
 
     struct Character structBuffer;
 
-    if(read(fd, &structBuffer, sizeof(struct Character)) <= 0){
+    if(fread(&structBuffer, sizeof(struct Character), 1, fp) <= 0){
       printf("ERROR reading body on iteration %li", i);
-      free(numEls);
       free(structArrayBuffer);
+      fflush(fp);
+      fclose(fp);
       //free(headerBuf);
       //DO you only need to free pointers? what about numElValue and structBuffer?
       return 1;
@@ -296,8 +360,10 @@ int loadCharacters(struct Character** ptr, size_t* numEls, int fd) {
 
     if(!isValidCharacter(&structBuffer)){
       printf("Invalid Character found in file");
-      free(numEls);
+      free(nmemb);
       free(structArrayBuffer);
+      fflush(fp);
+      fclose(fp);
       return 1;
     }
 
@@ -306,6 +372,8 @@ int loadCharacters(struct Character** ptr, size_t* numEls, int fd) {
   }
 
   *ptr = structArrayBuffer;
+  fflush(fp);
+  fclose(fp);
   return 0;
 }
 
@@ -315,7 +383,7 @@ int secureLoad(const char *filepath) {
 }
 
 
-void playGame(struct ItemDetails* ptr, size_t numEls);
+void playGame(struct ItemDetails* ptr, size_t nmemb);
 
 
 /*
