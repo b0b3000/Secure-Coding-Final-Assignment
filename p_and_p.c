@@ -10,10 +10,6 @@
 #include <pwd.h>
 #include <sys/stat.h>
 
-//CC=gcc CFLAGS="-std=c11 -pedantic -Wall -Wextra -Wshadow -Wconversion -O" make p_and_p.c p_and_p.o
-//make p_and_p
-// ./p_and_p
-
 /** Validates and serialises a given array of ItemDetails structs to a file specified by the caller. 
 * The written file will contain a header, with the number of ItemDetails struct serialised,
 * followed by one or more blocks, containing information about each struct.
@@ -26,44 +22,36 @@
 int saveItemDetails(const struct ItemDetails* arr, size_t nmemb, int fd) {
 
   if(fd<=2){
-    printf("File fd error\n");
     return 1;
   }
 
   int fdDup = dup(fd);
 
   if(fdDup<=2){
-    printf("File fdDup error\n");
     return 1;
   }
 
   FILE* fp = fdopen(fdDup, "w");
   if (!fp){
-    printf("Error opening file");
     fflush(fp);
     return 1;
   }
   fflush(fp);
 
-  //Header
   uint64_t numItems = nmemb;
   if(fwrite(&numItems, sizeof(uint64_t), 1, fp) != 1){
-    printf("ERROR writing header");
     fflush(fp);
     fclose(fp);
     return 1;
   }
 
-  //Block
   for (size_t index = 0; index < nmemb; index++){
     if (!isValidItemDetails(&arr[index])){
-      printf("INVALID ITEM DETAILS\n\n");
       fflush(fp);
       fclose(fp);
       return 1;
     }
     if(fwrite(&arr[index], sizeof(struct ItemDetails), 1, fp) != 1){
-      printf("ERROR writing body");
       fflush(fp);
       fclose(fp);
       return 1;
@@ -71,7 +59,6 @@ int saveItemDetails(const struct ItemDetails* arr, size_t nmemb, int fd) {
   }
 
   if (fclose(fp) != 0){
-    printf("File closing error");
     return 1;
   }
   return 0;
@@ -93,20 +80,19 @@ int saveItemDetails(const struct ItemDetails* arr, size_t nmemb, int fd) {
 int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
 
   if(fd<=2){
-    printf("File fdDup error\n");
+
     return 1;
   }
 
   int fdDup = dup(fd);
 
   if(fdDup<=2){
-    printf("File fdDup error\n");
+
     return 1;
   }
 
   FILE* fp = fdopen(fdDup, "r");
   if (!fp){
-    printf("Error opening file");
     return 1;
   }
   fflush(fp);
@@ -114,7 +100,6 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
   uint64_t headerBuf;
   
   if(fread(&headerBuf, sizeof(uint64_t), 1, fp) <= 0){
-    printf("ERROR reading header");
     fflush(fp);
     fclose(fp);
     return 1;
@@ -125,7 +110,6 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
   struct ItemDetails *structArrayBuffer = calloc(*nmemb, sizeof(struct ItemDetails));
 
   if (!structArrayBuffer){
-    printf("Error allocating memory\n");
     return 1;
   }
   
@@ -134,17 +118,13 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
     struct ItemDetails structBuffer;
 
     if(fread(&structBuffer, sizeof(struct ItemDetails), 1, fp) <= 0){
-
-      printf("ERROR reading body on iteration %li", i);
       free(structArrayBuffer);
       fflush(fp);
       fclose(fp);
       return 1;
-
     }
 
     if(!isValidItemDetails(&structBuffer)){
-      printf("Invalid ItemDetails found in file");
       free(structArrayBuffer);
       fflush(fp);
       fclose(fp);
@@ -158,7 +138,6 @@ int loadItemDetails(struct ItemDetails** ptr, size_t* nmemb, int fd) {
   *ptr = structArrayBuffer;
 
   if (fclose(fp) != 0){
-    printf("File closing error");
     return 1;
   }
 
@@ -185,7 +164,6 @@ int isValidName(const char *str) {
 
   for (int index = 0; index < DEFAULT_BUFFER_SIZE; index++){
     
-    //Should always be 1, unless the first character is '\0'
     if (str[index] == '\0'){
       return validName;
     }
@@ -217,7 +195,6 @@ int isValidMultiword(const char *str) {
     return 0;
   }
 
-  //Check the first character is not space
   if (!isgraph(str[0])){
     return 0;
   } 
@@ -225,8 +202,7 @@ int isValidMultiword(const char *str) {
   int validMulti = 0;
 
   for (int index = 1; index < DEFAULT_BUFFER_SIZE; index++){
-    
-    //if end, check the last character (the previous one) and return
+
     if (str[index] == '\0'){
       if (isspace(str[index - 1])){
         return 0;
@@ -240,7 +216,6 @@ int isValidMultiword(const char *str) {
     } else {
       return 0;
     }
-
   }
 
   return 0;
@@ -287,21 +262,17 @@ int isValidItemDetails(const struct ItemDetails *id) {
 
 int isValidCharacter(const struct Character * c) {
   if (c == NULL){
-    printf("NULL");
     return 0;
   }
   if (!isValidMultiword(c->name)){
-    printf("Character struct has invalid name\n");
     return 0;
   } 
 
   if (!isValidName(c->profession)){
-    printf("Character struct has invalid profession\n");
     return 0;
   } 
 
   if(c->inventorySize > MAX_ITEMS){
-    printf("Character inventory too big\n");
     return 0;
   }
   
@@ -310,7 +281,6 @@ int isValidCharacter(const struct Character * c) {
     itemsCarried = itemsCarried + c->inventory[i].quantity;
   }
   if(itemsCarried > MAX_ITEMS){
-    printf("Character has too many items\n");
     return 0;
   }
 
@@ -329,47 +299,38 @@ int isValidCharacter(const struct Character * c) {
 int saveCharacters(struct Character *arr, size_t nmemb, int fd) {
 
   if(fd<=2){
-    printf("File fd error\n");
     return 1;
   }
 
   int fdDup = dup(fd);
 
   if(fdDup<=2){
-    printf("File fdDup error\n");
     return 1;
   }
 
   FILE* fp = fdopen(fdDup, "w");
   if(!fp){
-    printf("Error opening FP");
     return 1;
   }
   fflush(fp);
 
-  //Header
   uint64_t numItems = nmemb;
 
   if(fwrite(&numItems, sizeof(uint64_t), 1, fp) <= 0){
-    printf("ERROR writing header");
-    fflush(stdout);
     fflush(fp);
     fclose(fp);
     return 1;
   }
 
-  //Block
   for (size_t index = 0; index < nmemb; index++){
     
     if (!isValidCharacter(&arr[index])){
-      printf("INVALID CHARACTER\n\n");
       fflush(fp);
       fclose(fp);
       return 1;
     }
 
     if(fwrite(&arr[index], sizeof(struct Character), 1, fp) <=0){
-      printf("ERROR writing body");
       fflush(fp);
       fclose(fp);
       return 1;
@@ -378,7 +339,6 @@ int saveCharacters(struct Character *arr, size_t nmemb, int fd) {
   }
 
   if (fclose(fp) != 0){
-    printf("File closing error");
     return 1;
   }
   return 0;
@@ -401,29 +361,24 @@ int saveCharacters(struct Character *arr, size_t nmemb, int fd) {
 int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
 
   if(fd<=2){
-    printf("File fd error%i\n", fd);
     return 1;
   }
 
   int fdDup = dup(fd);
 
   if(fdDup<=2){
-    printf("File fdDup error\n");
     return 1;
   }
 
   FILE* fp = fdopen(fdDup, "r");
   if(!fp){
-    printf("Error opening FP");
     return 1;
   }
   fflush(fp);
 
-  //Header
   uint64_t headerBuf;
-  
+
   if(fread(&headerBuf, sizeof(uint64_t), 1, fp) <= 0){
-    printf("ERROR reading header");
     fflush(fp);
     fclose(fp);
     return 1;
@@ -431,7 +386,6 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
 
   *nmemb = headerBuf;
 
-  //Block
   struct Character *structArrayBuffer = calloc(*nmemb, sizeof(struct Character));
   
   for (size_t i = 0; i < *nmemb; i++){
@@ -439,7 +393,6 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
     struct Character structBuffer;
 
     if(fread(&structBuffer, sizeof(struct Character), 1, fp) <= 0){
-      printf("ERROR reading body on iteration %li", i);
       free(structArrayBuffer);
       fflush(fp);
       fclose(fp);
@@ -447,7 +400,6 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
     }
 
     if(!isValidCharacter(&structBuffer)){
-      printf("Invalid Character found in file");
       free(structArrayBuffer);
       fflush(fp);
       fclose(fp);
@@ -461,15 +413,9 @@ int loadCharacters(struct Character** ptr, size_t* nmemb, int fd) {
   *ptr = structArrayBuffer;
   
   if (fclose(fp) != 0){
-    printf("File closing error");
     return 1;
   }
   return 0;
-}
-
-void playGame(struct ItemDetails* ptr, size_t nmemb){
-
-  return;
 }
 
 /** 
@@ -492,12 +438,11 @@ int secureLoad(const char *filepath) {
 
   long int bufferSize = sysconf(_SC_GETPW_R_SIZE_MAX);
   if (bufferSize < 0){        
-    bufferSize = 16384;  
+    bufferSize = 16000;  
   }
 
   char* buf = malloc((size_t) bufferSize);
   if (buf == NULL) {
-    printf("Malloc unsuccesful");
     return 1;
   }
 
@@ -512,31 +457,26 @@ int secureLoad(const char *filepath) {
   uid_t callerUid = getuid();
 
   if (callerUid != ppAdmin.pw_uid){
-    printf("Not the admin. Error");
     return 2;
   }
 
   if(seteuid(ppAdmin.pw_uid) == -1){
-    printf("Error with seteuid\n");
     return 2;
   }
 
   int fd = open(filepath, O_RDONLY);
 
   if (fd <= 2){
-    printf("BAD FD");
     return 1;
   }
 
   struct stat fileStats;
 
   if(fstat(fd, &fileStats) == -1){
-    printf("Error obtaining file stats\n");
     return 1;
   }
 
   if(!((fileStats.st_uid == ppAdmin.pw_uid) && (fileStats.st_gid == ppAdmin.pw_gid))){
-    printf("Invalid file perms");
     return 1;
   }
 
@@ -544,17 +484,14 @@ int secureLoad(const char *filepath) {
   size_t nmemb;
 
   if(loadItemDetails(&ptr, &nmemb, fd) == 1){
-    printf("Error with load item");
     return 1;
   }
 
   if(close(fd) != 0){
-    printf("error closing fd");
     return 1;
   }
 
   if(seteuid(callerUid) == -1){
-    printf("error dropping");
     return 2;
   }
 
